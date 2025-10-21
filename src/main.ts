@@ -1,7 +1,27 @@
-import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 
-import { AppModule } from './app/app.module';
+/// <reference types="@angular/localize" />
 
+import '@angular/localize/init';
+import './polyfills';
 
-platformBrowserDynamic().bootstrapModule(AppModule)
-  .catch(err => console.error(err));
+import { bootstrapApplication } from '@angular/platform-browser';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideHttpClient, withInterceptors, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { importProvidersFrom } from '@angular/core';
+import { AppComponent } from './app/app.component';
+import { AIService } from './app/ai.service';
+
+import '@progress/kendo-angular-intl/locales/en/all';
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideAnimations(),
+    provideHttpClient(),
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: AIService,
+      multi: true
+    }
+  ]
+}).catch(err => console.error(err));
+    
