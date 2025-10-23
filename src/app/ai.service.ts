@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpInterceptor, HttpRequest, HttpHandler } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 export interface AIRequest {
@@ -21,7 +21,7 @@ export class AIService implements HttpInterceptor {
   private readonly aiUrl = 'https://framsiktaiapi.openai.azure.com/openai/deployments/gpt-o1/chat/completions?api-version=2024-12-01-preview';
   private readonly aiKey = '4606bf622d804eefa76e13166d25a3a2';
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<any> {
     // Intercept requests to our mock AI service
@@ -108,7 +108,7 @@ export class AIService implements HttpInterceptor {
           
           When users ask to highlight certain data, respond ONLY with a JSON object in this exact format:
           {
-            "messages": ["Brief description of what was highlighted"],
+            "messages": ["Brief description of what was done"],
             "highlight": [
               {
                 "logic": "and",
@@ -124,13 +124,54 @@ export class AIService implements HttpInterceptor {
             ]
           }
           
+          When users ask to sort data, use this format:
+          {
+            "messages": ["Sorted by [field] [direction]"],
+            "sort": [
+              {
+                "field": "FieldName",
+                "dir": "asc" or "desc"
+              }
+            ]
+          }
+          
+          When users ask to group data, use this format:
+          {
+            "messages": ["Grouped by [field]"],
+            "group": [
+              {
+                "field": "FieldName",
+                "dir": "asc" or "desc"
+              }
+            ]
+          }
+          
+          When users ask to filter data, use this format:
+          {
+            "messages": ["Filtered to show [criteria]"],
+            "filter": {
+              "logic": "and",
+              "filters": [
+                {
+                  "field": "FieldName",
+                  "operator": "eq",
+                  "value": "ActualValue"
+                }
+              ]
+            }
+          }
+          
           For clearing highlights, use: {"messages": ["Cleared all highlighting"], "highlight": []}
+          For clearing all operations: {"messages": ["Cleared all filters, sorting, and grouping"], "sort": [], "group": [], "filter": null, "highlight": []}
           
           Examples:
           - "highlight high risk" → {"messages": ["Highlighted high-risk applications"], "highlight": [{"logic": "and", "filters": [{"field": "RiskLevel", "operator": "eq", "value": "High"}], "cells": {}}]}
-          - "show rejected loans" → {"messages": ["Highlighted rejected loans"], "highlight": [{"logic": "and", "filters": [{"field": "ApplicationStatus", "operator": "eq", "value": "Rejected"}], "cells": {}}]}
-          - "show loans by John Smith" → {"messages": ["Highlighted loans for John Smith"], "highlight": [{"logic": "and", "filters": [{"field": "CustomerName", "operator": "eq", "value": "John Smith"}], "cells": {}}]}
-          - "credit score below 600" → {"messages": ["Highlighted low credit scores"], "highlight": [{"logic": "and", "filters": [{"field": "CreditScore", "operator": "lt", "value": 600}], "cells": {}}]}
+          - "sort by credit score descending" → {"messages": ["Sorted by credit score (highest first)"], "sort": [{"field": "CreditScore", "dir": "desc"}]}
+          - "group by loan type" → {"messages": ["Grouped applications by loan type"], "group": [{"field": "LoanType", "dir": "asc"}]}
+          - "show only approved loans" → {"messages": ["Filtered to show approved loans only"], "filter": {"logic": "and", "filters": [{"field": "ApplicationStatus", "operator": "eq", "value": "Approved"}]}}
+          - "show rejected loans greater than $20,000" → {"messages": ["Filtered to show rejected loans over $20,000"], "filter": {"logic": "and", "filters": [{"field": "ApplicationStatus", "operator": "eq", "value": "Rejected"}, {"field": "RequestedAmount", "operator": "gt", "value": 20000}]}}
+          
+          Available operators: eq (equals), gt (greater than), lt (less than), gte (greater or equal), lte (less or equal), contains (text contains)
           
           IMPORTANT: Respond ONLY with the JSON object, no other text.`
         },
@@ -139,7 +180,7 @@ export class AIService implements HttpInterceptor {
           content: prompt
         }
       ],
-      max_completion_tokens: 500
+      max_completion_tokens: 1500
     };
 
     try {
@@ -158,7 +199,7 @@ export class AIService implements HttpInterceptor {
         console.log('AI Response:', aiResponse);
         return aiResponse;
       } catch (parseError) {
-        console.warn('Failed to parse AI response:', content);
+        console.warn('Failed to parse AI response:', content, parseError);
         return {
           messages: [`AI processed: ${prompt}`],
           highlight: []

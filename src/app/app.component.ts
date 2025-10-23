@@ -8,13 +8,14 @@ import {
   HighlightItem,
   AIAssistantToolbarDirective,
   GridToolbarAIRequestResponse,
-  CompositeHighlightDescriptor,
+  DataStateChangeEvent,
 } from "@progress/kendo-angular-grid";
 import {
   KENDO_PROGRESSBARS,
   LabelSettings,
 } from "@progress/kendo-angular-progressbar";
 import { KENDO_TOOLBAR } from "@progress/kendo-angular-toolbar";
+import { process, SortDescriptor, GroupDescriptor, CompositeFilterDescriptor } from "@progress/kendo-data-query";
 import {
   AIPromptComponent,
   PromptOutput,
@@ -45,7 +46,17 @@ import { AIService } from './ai.service';
     HttpClientModule,
   ],
   template: `
-    <kendo-grid #grid [kendoGridBinding]="applications" [kendoGridHighlight]="highlightedKeys">
+    <kendo-grid #grid 
+    [kendoGridBinding]="applications" 
+    [kendoGridHighlight]="highlightedKeys"
+    [groupable]="true"
+    [sortable]="{ mode: 'multiple' }"
+    filterable="menu"
+    [sort]="sortDescriptors"
+    [group]="groupDescriptors"
+    [filter]="filterDescriptor"
+    (dataStateChange)="onDataStateChange($event)"
+    >
       <kendo-toolbar>
         <kendo-toolbar-button
           kendoGridAIAssistantTool
@@ -63,7 +74,7 @@ import { AIService } from './ai.service';
           (click)="resetChanges()"
           [svgIcon]="resetIcon"
           text="Reset Changes"
-          [disabled]="!highlightedKeys.length"
+          [disabled]="!highlightedKeys.length && !hasDataOperations"
         ></kendo-toolbar-button>
       </kendo-toolbar>
 
@@ -164,6 +175,7 @@ export class AppComponent {
   };
   public aiPromptSettings: GridToolbarAIPromptSettings = {
     promptSuggestions: [
+      // Highlighting prompts
       "Highlight high-risk applications",
       "Show rejected loans greater than $20,000",
       "Highlight applications with credit scores below 600",
@@ -171,6 +183,30 @@ export class AppComponent {
       "Show approved loans with high amounts",
       "Highlight customers with medium or high risk levels",
       "Clear all highlighting",
+      
+      // Sorting prompts
+      "Sort applications by credit score descending",
+      "Sort by requested amount ascending",
+      "Sort by submission date newest first",
+      "Sort by customer name alphabetically",
+      
+      // Grouping prompts
+      "Group applications by loan type",
+      "Group by application status",
+      "Group by risk level",
+      
+      // Filtering prompts
+      "Show only approved applications",
+      "Filter to rejected loans only",
+      "Show applications under review",
+      "Show mortgage loans only",
+      "Filter high-risk applications",
+      "Show applications with missing credit scores",
+      
+      // Combined operations
+      "Show approved mortgages sorted by amount",
+      "Group high-risk applications by loan type",
+      "Filter and highlight rejected personal loans",
     ],
   };
   public highlightedKeys: HighlightItem[] = [];
@@ -182,7 +218,19 @@ export class AppComponent {
   public resetIcon: SVGIcon = arrowRotateCcwIcon;
 
   public resetChanges(): void {
+    this.grid.filter = null;
+    this.grid.sort = [];
+    this.grid.group = [];
     this.highlightedKeys = [];
+    this.sortDescriptors = [];
+    this.groupDescriptors = [];
+    this.filterDescriptor = null;
+    this.grid.data = process(this.applications, {
+      filter: undefined,
+      sort: [],
+      group: [],
+    });
+    this.hasDataOperations = false;
   }
 
   public getChipThemeColor(applicationStatus: string): ChipThemeColor {
@@ -217,8 +265,14 @@ export class AppComponent {
   public idCounter: number = 0;
   public lastMessage!: string;
   public promptOutputs: PromptOutput[] = [];
+  public hasDataOperations: boolean = false;
+  
+  // Grid state properties
+  public sortDescriptors: SortDescriptor[] = [];
+  public groupDescriptors: GroupDescriptor[] = [];
+  public filterDescriptor: CompositeFilterDescriptor | null = null;
 
-  constructor(private aiService: AIService) {}
+  constructor(private readonly aiService: AIService) {}
 
   public onResponseSuccess(event: any): void {
     console.log('AI Response Success:', event);
@@ -226,7 +280,7 @@ export class AppComponent {
     let responseData = null;
     
     // Handle different response structures
-    if (event.response && event.response.body) {
+    if (event.response?.body) {
       responseData = event.response.body;
     } else if (event.body) {
       responseData = event.body;
@@ -252,8 +306,38 @@ export class AppComponent {
     // Don't do manual processing here to avoid conflicts
   }
 
+  public onDataStateChange(state: DataStateChangeEvent): void {
+    const hasFilters = state.filter?.filters && state.filter.filters.length > 0;
+    const hasSorting = state.sort && state.sort.length > 0;
+    const hasGrouping = state.group && state.group.length > 0;
+    const hasPageNavigation = state.skip > 0;
+
+    this.hasDataOperations =
+      hasFilters || hasSorting || hasGrouping || hasPageNavigation;
+  }
   private applyAIResponse(response: GridToolbarAIRequestResponse): void {
     console.log('Applying AI response:', response);
+    
+    // Apply sorting
+    if (response.sort && response.sort.length > 0) {
+      this.sortDescriptors = response.sort;
+      this.grid.sort = response.sort;
+      console.log('Applied sorting:', response.sort);
+    }
+    
+    // Apply grouping
+    if (response.group && response.group.length > 0) {
+      this.groupDescriptors = response.group;
+      this.grid.group = response.group;
+      console.log('Applied grouping:', response.group);
+    }
+    
+    // Apply filtering
+    if (response.filter) {
+      this.filterDescriptor = response.filter;
+      this.grid.filter = response.filter;
+      console.log('Applied filtering:', response.filter);
+    }
     
     // Apply highlighting directly to the grid
     if (response.highlight && response.highlight.length > 0) {
@@ -261,14 +345,14 @@ export class AppComponent {
       this.highlightedKeys = [];
       
       // Apply new highlights based on the filters
-      response.highlight.forEach(highlightDescriptor => {
-        this.applications.forEach((item, index) => {
+      for (const highlightDescriptor of response.highlight) {
+        for (const item of this.applications) {
           if (this.matchesFilters(item, highlightDescriptor.filters, highlightDescriptor.logic)) {
             // For Kendo Grid highlighting, we need to use the actual data item
             this.highlightedKeys.push(item as HighlightItem);
           }
-        });
-      });
+        }
+      }
       
       console.log(`Applied highlighting to ${this.highlightedKeys.length} items`);
       console.log('Highlighted items:', this.highlightedKeys.map(item => (item as any).CustomerName));
@@ -278,6 +362,13 @@ export class AppComponent {
       this.highlightedKeys = [];
       console.log('Cleared all highlights');
     }
+    
+    // Update hasDataOperations flag
+    this.hasDataOperations = 
+      (this.sortDescriptors.length > 0) ||
+      (this.groupDescriptors.length > 0) ||
+      (this.filterDescriptor !== null) ||
+      (this.highlightedKeys.length > 0);
     
     // Show messages to user
     if (response.messages && response.messages.length > 0) {
@@ -303,13 +394,13 @@ export class AppComponent {
         case 'lte':
           return fieldValue <= filter.value;
         case 'contains':
-          return fieldValue && fieldValue.toString().toLowerCase().includes(filter.value.toLowerCase());
+          return fieldValue?.toString().toLowerCase().includes(filter.value.toLowerCase()) ?? false;
         default:
           return false;
       }
     });
     
-    return logic === 'and' ? results.every(r => r) : results.some(r => r);
+    return logic === 'and' ? results.every(Boolean) : results.some(Boolean);
   }
 
 
