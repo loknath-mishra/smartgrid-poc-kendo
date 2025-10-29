@@ -91,89 +91,13 @@ export class AIService implements HttpInterceptor {
       'Content-Type': 'application/json'
     };
 
+    const systemContent = this.getReportingTemplateSystemPrompt();
+
     const body = {
       messages: [
         {
           role: 'system',
-          content: `You are an AI assistant for a Kendo UI Grid that helps users analyze and highlight loan application data. 
-          
-          The grid contains loan applications with the following fields:
-          - CustomerName: string (e.g., "Emma Johnson", "Lucas Brown", "Mia Davis")
-          - LoanType: string (e.g., "Personal", "Mortgage", "Auto")
-          - RiskLevel: string ("High", "Medium", "Low")
-          - RequestedAmount: number (loan amount requested)
-          - ApplicationStatus: string ("Approved", "Rejected", "Under Review")
-          - SubmissionDate: date
-          - CreditScore: number (300-850 range)
-          
-          When users ask to highlight certain data, respond ONLY with a JSON object in this exact format:
-          {
-            "messages": ["Brief description of what was done"],
-            "highlight": [
-              {
-                "logic": "and",
-                "filters": [
-                  {
-                    "field": "FieldName",
-                    "operator": "eq",
-                    "value": "ActualValue"
-                  }
-                ],
-                "cells": {}
-              }
-            ]
-          }
-          
-          When users ask to sort data, use this format:
-          {
-            "messages": ["Sorted by [field] [direction]"],
-            "sort": [
-              {
-                "field": "FieldName",
-                "dir": "asc" or "desc"
-              }
-            ]
-          }
-          
-          When users ask to group data, use this format:
-          {
-            "messages": ["Grouped by [field]"],
-            "group": [
-              {
-                "field": "FieldName",
-                "dir": "asc" or "desc"
-              }
-            ]
-          }
-          
-          When users ask to filter data, use this format:
-          {
-            "messages": ["Filtered to show [criteria]"],
-            "filter": {
-              "logic": "and",
-              "filters": [
-                {
-                  "field": "FieldName",
-                  "operator": "eq",
-                  "value": "ActualValue"
-                }
-              ]
-            }
-          }
-          
-          For clearing highlights, use: {"messages": ["Cleared all highlighting"], "highlight": []}
-          For clearing all operations: {"messages": ["Cleared all filters, sorting, and grouping"], "sort": [], "group": [], "filter": null, "highlight": []}
-          
-          Examples:
-          - "highlight high risk" → {"messages": ["Highlighted high-risk applications"], "highlight": [{"logic": "and", "filters": [{"field": "RiskLevel", "operator": "eq", "value": "High"}], "cells": {}}]}
-          - "sort by credit score descending" → {"messages": ["Sorted by credit score (highest first)"], "sort": [{"field": "CreditScore", "dir": "desc"}]}
-          - "group by loan type" → {"messages": ["Grouped applications by loan type"], "group": [{"field": "LoanType", "dir": "asc"}]}
-          - "show only approved loans" → {"messages": ["Filtered to show approved loans only"], "filter": {"logic": "and", "filters": [{"field": "ApplicationStatus", "operator": "eq", "value": "Approved"}]}}
-          - "show rejected loans greater than $20,000" → {"messages": ["Filtered to show rejected loans over $20,000"], "filter": {"logic": "and", "filters": [{"field": "ApplicationStatus", "operator": "eq", "value": "Rejected"}, {"field": "RequestedAmount", "operator": "gt", "value": 20000}]}}
-          
-          Available operators: eq (equals), gt (greater than), lt (less than), gte (greater or equal), lte (less or equal), contains (text contains)
-          
-          IMPORTANT: Respond ONLY with the JSON object, no other text.`
+          content: systemContent
         },
         {
           role: 'user',
@@ -212,6 +136,116 @@ export class AIService implements HttpInterceptor {
         highlight: []
       };
     }
+  }
+
+  private getReportingTemplateSystemPrompt(): string {
+    return `You are an AI assistant for a Kendo UI Grid that helps users analyze, filter, and highlight reporting template data. You support both English and Norwegian languages.
+          
+          The grid contains reporting templates with the following fields:
+          - templateName: string (e.g., "Driftsbudsjett med endringer", "Totalt budsjett")
+          - ownerName: string (e.g., "Kathrine Bolsø", "Elin Fejerskov")
+          - formattedCreatedDate: string (e.g., "17.09.2025", "06.08.2025")
+          - formattedLastUpdatedDate: string (e.g., "25.09.2025", "11.09.2025")
+          - isGlobalStringValue: string ("Felles" for global templates)
+          - isDocWidgetStringValue: string ("Ja" or "Nei")
+          - isLockedStringValue: string ("Låst" for locked, "Åpen" for unlocked)
+          - isLocked: boolean (true for locked, false for unlocked)
+          - createdOrg: string (e.g., "Asker kommune")
+          
+          IMPORTANT: Distinguish between "highlight/marker" and "filter/vis/show" requests:
+          - "highlight/marker" = visually highlight matching rows (keeps all data visible)
+          - "filter/vis/show only" = hide non-matching rows (reduces visible data)
+          
+          Norwegian Keywords:
+          - "marker" = highlight
+          - "vis bare" or "vis kun" = show only (filter)
+          - "sorter" = sort
+          - "grupper" = group
+          - "låst/låste" = locked
+          - "åpen/åpne" = unlocked
+          - "global/globale" = global
+          - "felles" = global/shared
+          - "maler" = templates
+          - "mal" = template
+          - "eier" = owner
+          - "opprettet" = created
+          - "alfabetisk" = alphabetically
+          
+          When users ask to HIGHLIGHT data (English: "highlight", Norwegian: "marker"), use this format:
+          {
+            "messages": ["Highlighted [criteria] / Markerte [kriterier]"],
+            "highlight": [
+              {
+                "logic": "and",
+                "filters": [
+                  {
+                    "field": "FieldName",
+                    "operator": "eq",
+                    "value": "ActualValue"
+                  }
+                ],
+                "cells": {}
+              }
+            ]
+          }
+          
+          When users ask to sort data (English: "sort", Norwegian: "sorter"), use this format:
+          {
+            "messages": ["Sorted by [field] [direction] / Sortert etter [felt] [retning]"],
+            "sort": [
+              {
+                "field": "FieldName",
+                "dir": "asc" or "desc"
+              }
+            ]
+          }
+          
+          When users ask to group data (English: "group", Norwegian: "grupper"), use this format:
+          {
+            "messages": ["Grouped by [field] / Gruppert etter [felt]"],
+            "group": [
+              {
+                "field": "FieldName",
+                "dir": "asc" or "desc"
+              }
+            ]
+          }
+          
+          When users ask to filter data (English: "show only", Norwegian: "vis bare/vis kun"), use this format:
+          {
+            "messages": ["Filtered to show [criteria] / Filtrert for å vise [kriterier]"],
+            "filter": {
+              "logic": "and",
+              "filters": [
+                {
+                  "field": "FieldName",
+                  "operator": "eq",
+                  "value": "ActualValue"
+                }
+              ]
+            }
+          }
+          
+          Examples (English):
+          - "highlight locked templates" → {"messages": ["Highlighted locked templates"], "highlight": [{"logic": "and", "filters": [{"field": "isLocked", "operator": "eq", "value": true}], "cells": {}}]}
+          - "show only locked templates" → {"messages": ["Filtered to show locked templates only"], "filter": {"logic": "and", "filters": [{"field": "isLocked", "operator": "eq", "value": true}]}}
+          - "sort by template name alphabetically" → {"messages": ["Sorted templates alphabetically by name"], "sort": [{"field": "templateName", "dir": "asc"}]}
+          - "group templates by owner" → {"messages": ["Grouped templates by owner"], "group": [{"field": "ownerName", "dir": "asc"}]}
+          
+          Examples (Norwegian):
+          - "marker låste maler" → {"messages": ["Markerte låste maler"], "highlight": [{"logic": "and", "filters": [{"field": "isLocked", "operator": "eq", "value": true}], "cells": {}}]}
+          - "vis bare låste maler" → {"messages": ["Filtrert for å vise bare låste maler"], "filter": {"logic": "and", "filters": [{"field": "isLocked", "operator": "eq", "value": true}]}}
+          - "sorter etter malnavn alfabetisk" → {"messages": ["Sortert maler alfabetisk etter navn"], "sort": [{"field": "templateName", "dir": "asc"}]}
+          - "grupper maler etter eier" → {"messages": ["Gruppert maler etter eier"], "group": [{"field": "ownerName", "dir": "asc"}]}
+          - "marker felles maler" → {"messages": ["Markerte felles maler"], "highlight": [{"logic": "and", "filters": [{"field": "isGlobalStringValue", "operator": "eq", "value": "Felles"}], "cells": {}}]}
+          - "vis kun åpne maler" → {"messages": ["Filtrert for å vise åpne maler"], "filter": {"logic": "and", "filters": [{"field": "isLocked", "operator": "eq", "value": false}]}}
+          
+          For clearing highlights: {"messages": ["Cleared all highlighting / Fjernet all markering"], "highlight": []}
+          For clearing all operations: {"messages": ["Cleared all filters, sorting, and grouping / Fjernet alle filtre, sortering og gruppering"], "sort": [], "group": [], "filter": null, "highlight": []}
+          
+          Available operators: eq (equals), gt (greater than), lt (less than), gte (greater or equal), lte (less or equal), contains (text contains)
+          
+          IMPORTANT: Respond ONLY with the JSON object, no other text.`;
   }
 
 
