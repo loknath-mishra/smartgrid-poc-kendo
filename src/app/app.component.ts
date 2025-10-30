@@ -48,7 +48,7 @@ import { AIService } from './ai.service';
             [kendoGridBinding]="reportingTemplates"
             [sortable]="true"
             [filterable]="true"
-            [groupable]="true"
+            [groupable]="{ enabled: true, emptyText: 'Dra en kolonne hit for å gruppere' }"
             [sort]="reportingSortDescriptors"
             [group]="reportingGroupDescriptors"
             [filter]="reportingFilterDescriptor"
@@ -77,7 +77,7 @@ import { AIService } from './ai.service';
             </kendo-toolbar>
 
             <ng-template kendoGridNoRecordsTemplate>
-              No templates found
+              Ingen maler funnet.
             </ng-template>
             
             <kendo-grid-column
@@ -227,14 +227,14 @@ export class AppComponent {
 
   // Reporting template grid columns
   public reportingTemplateGridColumns = [
-    { field: 'templateName', title: 'Template Name', width: 200 },
-    { field: 'ownerName', title: 'Owner', width: 150 },
-    { field: 'formattedCreatedDate', title: 'Created Date', width: 120 },
-    { field: 'formattedLastUpdatedDate', title: 'Last Updated', width: 120 },
-    { field: 'isGlobalStringValue', title: 'Access Rights', width: 100 },
-    { field: 'isDocWidgetStringValue', title: 'Doc Widget', width: 100 },
+    { field: 'templateName', title: 'Spørremaler', width: 200 },
+    { field: 'ownerName', title: 'Eier', width: 150 },
+    { field: 'formattedCreatedDate', title: 'Opprettet dato', width: 120 },
+    { field: 'formattedLastUpdatedDate', title: 'Sist oppdatert', width: 120 },
+    { field: 'isGlobalStringValue', title: 'Tilgangsrettigheter', width: 100 },
+    { field: 'isDocWidgetStringValue', title: 'Dokumentwidget', width: 100 },
     { field: 'isLockedStringValue', title: 'Status', width: 80 },
-    { field: 'createdOrg', title: 'Organization', width: 150 }
+    { field: 'createdOrg', title: 'Organisasjon', width: 150 }
   ];
 
   constructor(private readonly aiService: AIService) {}
