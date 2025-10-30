@@ -1,4 +1,4 @@
-import { Component, ViewChild, ViewEncapsulation } from "@angular/core";
+import { Component, ViewChild, ViewEncapsulation, ElementRef } from "@angular/core";
 import { ReportingTemplate, reportingData } from "./highlight-data";
 import {
   KENDO_GRID,
@@ -14,13 +14,18 @@ import {
   AIPromptComponent,
   PromptOutput,
   KENDO_CONVERSATIONALUI,
+  InlineAIPromptService,
+  InlineAIPromptRequestEvent,
+  InlineAIPromptCommand,
+  InlineAIPromptOutputAction
 } from "@progress/kendo-angular-conversational-ui";
 import {
   BadgeThemeColor,
   KENDO_INDICATORS,
 } from "@progress/kendo-angular-indicators";
 import { KENDO_ICONS } from "@progress/kendo-angular-icons";
-import { arrowRotateCcwIcon, lockIcon, unlockIcon, SVGIcon } from "@progress/kendo-svg-icons";
+import { KENDO_BUTTON } from "@progress/kendo-angular-buttons";
+import { arrowRotateCcwIcon, lockIcon, unlockIcon, SVGIcon, sparklesIcon } from "@progress/kendo-svg-icons";
 import { HttpClient, HttpClientModule } from "@angular/common/http";
 import { CommonModule } from "@angular/common";
 import { AIService } from './ai.service';
@@ -34,6 +39,7 @@ import { AIService } from './ai.service';
     KENDO_GRID,
     KENDO_INDICATORS,
     KENDO_TOOLBAR,
+    KENDO_BUTTON,
     KENDO_ICONS,
     KENDO_CONVERSATIONALUI,
     HttpClientModule,
@@ -63,6 +69,7 @@ import { AIService } from './ai.service';
                 [keepOutputHistory]="true"
                 [aiPromptSettings]="reportingAiPromptSettings"
                 [aiWindowSettings]="aiWindowSettings"
+                text="🤖 Toolbar AI Assistant"
                 (promptRequest)="onReportingPromptRequest($event)"
                 (responseSuccess)="onReportingResponseSuccess($event)"
                 (responseError)="onReportingResponseError($event)"
@@ -74,11 +81,33 @@ import { AIService } from './ai.service';
                 text="Reset Changes"
                 [disabled]="!hasReportingDataOperations"
               ></kendo-toolbar-button>
+              <kendo-toolbar-button
+                (click)="exportGridData()"
+                icon="k-i-excel"
+                text="Export"
+              ></kendo-toolbar-button>
             </kendo-toolbar>
 
             <ng-template kendoGridNoRecordsTemplate>
               Ingen maler funnet.
             </ng-template>
+            
+            <!-- AI Column Assistant -->
+            <kendo-grid-column title="AI Assistant" [width]="120" [sortable]="false" [filterable]="false">
+              <ng-template kendoGridCellTemplate let-dataItem>
+                <button
+                  #anchor
+                  kendoButton
+                  [svgIcon]="sparklesIcon"
+                  fillMode="flat"
+                  themeColor="primary"
+                  title="Ask AI about this template"
+                  (click)="onAIButtonClick(dataItem, anchor)"
+                >
+                  AI
+                </button>
+              </ng-template>
+            </kendo-grid-column>
             
             <kendo-grid-column
               *ngFor="let column of reportingTemplateGridColumns"
@@ -167,8 +196,6 @@ import { AIService } from './ai.service';
 })
 export class AppComponent {
   @ViewChild('reportingGrid', { static: false }) public reportingGrid!: GridComponent;
-  @ViewChild(AIAssistantToolbarDirective)
-  public aiAssistant!: AIAssistantToolbarDirective;
   
   public aiRequestOptions = {
     headers: {
@@ -203,6 +230,12 @@ export class AppComponent {
   public resetIcon: SVGIcon = arrowRotateCcwIcon;
   public lockIcon: SVGIcon = lockIcon;
   public unlockIcon: SVGIcon = unlockIcon;
+  public sparklesIcon: SVGIcon = sparklesIcon;
+  
+  // AI Column Assistant properties
+  public inlineAIPromptInstance: any;
+  public currentDataItem: any;
+  public promptOutput: PromptOutput | null = null;
 
   public resetChanges(): void {
     // This method is no longer needed but kept for backwards compatibility
@@ -237,7 +270,10 @@ export class AppComponent {
     { field: 'createdOrg', title: 'Organisasjon', width: 150 }
   ];
 
-  constructor(private readonly aiService: AIService) {}
+  constructor(
+    private readonly aiService: AIService,
+    private promptService: InlineAIPromptService
+  ) {}
 
   public resetReportingChanges(): void {
     this.reportingSortDescriptors = [];
@@ -279,15 +315,305 @@ export class AppComponent {
     console.error('Reporting AI Response Error:', event);
   }
 
-  public onReportingPromptRequest(event: any): void {
-    console.log('Reporting AI Prompt Request received:', event);
-    // Let the automatic processing handle this through the interceptor
+  // AI Column Assistant Methods
+  public onAIButtonClick(dataItem: ReportingTemplate, anchor: ElementRef): void {
+    console.log('AI Assistant clicked for:', dataItem.templateName);
+    
+    this.currentDataItem = dataItem;
+    
+    // Define prompt commands specific to reporting templates
+    const promptCommands: InlineAIPromptCommand[] = [
+      {
+        id: 'summarize',
+        text: 'Summarize this template',
+        icon: 'k-i-chart-line-markers'
+      },   
+      {
+        id: 'explain',
+        text: 'Explain template purpose',
+        icon: 'k-i-question'
+      },
+      {
+        id: 'sammendrag',
+        text: 'Sammendrag av denne malen',
+        icon: 'k-i-chart-line-markers'
+      },   
+      {
+        id: 'forklar',
+        text: 'Forklar malens formål',
+        icon: 'k-i-question'
+      }
+    ];
+
+    // Define output actions
+    const outputActions: InlineAIPromptOutputAction[] = [
+      {
+        name: 'copy'
+      },
+      {
+        name: 'discard'
+      }
+    ];
+
+    try {
+      this.inlineAIPromptInstance = this.promptService.open({
+        popupSettings: { 
+          anchor: anchor
+        },
+        promptCommands: promptCommands,
+        outputActions: outputActions
+      });
+
+      const promptComponentInstance = this.inlineAIPromptInstance.content.instance;
+
+      // Handle manual prompts
+      promptComponentInstance.promptRequest.subscribe((event: InlineAIPromptRequestEvent) => {
+        this.handleAIRequest(dataItem, event.prompt);
+      });
+
+      // Handle command executions
+      promptComponentInstance.commandExecute.subscribe((command: InlineAIPromptCommand) => {
+        this.handleAIRequest(dataItem, command.text);
+      });
+
+    } catch (error) {
+      console.error('Error opening AI prompt:', error);
+    }
   }
 
+  private handleAIRequest(dataItem: ReportingTemplate, prompt: string): void {
+    console.log('Handling AI request:', prompt, 'for:', dataItem.templateName);
+    
+    // Create output object
+    const outputId = this.generateGuid();
+    const output: PromptOutput = {
+      id: outputId,
+      output: '',
+      prompt: prompt
+    };
 
+    this.promptOutput = output;
 
+    // Create context-aware prompt for the AI service
+    const contextualPrompt = this.buildContextualPrompt(dataItem, prompt);
+    
+    // Call AI service
+    this.aiService.generateGridResponse(contextualPrompt)
+      .then((response) => this.onAIResponseSuccess(response))
+      .catch((error) => this.onAIResponseError(error));
+  }
 
-  
+  private buildContextualPrompt(dataItem: ReportingTemplate, userPrompt: string): string {
+    // Detect if this is a Norwegian command
+    const isNorwegian = userPrompt.includes('Sammendrag') || userPrompt.includes('Forklar') || 
+                       userPrompt.includes('malen') || userPrompt.includes('formål');
+    
+    if (isNorwegian) {
+      const context = `
+      Du lager et sammendrag av en rapporteringsmal med følgende detaljer:
+      - Malnavn: ${dataItem.templateName}
+      - Eier: ${dataItem.ownerName}
+      - Opprettet dato: ${dataItem.formattedCreatedDate}
+      - Sist oppdatert: ${dataItem.formattedLastUpdatedDate}
+      - Status: ${dataItem.isLockedStringValue}
+      - Tilgangsrettigheter: ${dataItem.isGlobalStringValue}
+      - Organisasjon: ${dataItem.createdOrg}
+      - Dokument Widget: ${dataItem.isDocWidgetStringValue}
+      
+      Brukers spørsmål: ${userPrompt}
+      
+      Vennligst gi et nyttig, kortfattet sammendrag på norsk om denne rapporteringsmalen.
+      `;
+      
+      return context;
+    } else {
+      const context = `
+      You are summarizing a reporting template with the following details:
+      - Template Name: ${dataItem.templateName}
+      - Owner: ${dataItem.ownerName}
+      - Created Date: ${dataItem.formattedCreatedDate}
+      - Last Updated: ${dataItem.formattedLastUpdatedDate}
+      - Status: ${dataItem.isLockedStringValue}
+      - Access Rights: ${dataItem.isGlobalStringValue}
+      - Organization: ${dataItem.createdOrg}
+      - Doc Widget: ${dataItem.isDocWidgetStringValue}
+      
+      User Question: ${userPrompt}
+      
+      Please provide a helpful, concise summary about this reporting template.
+      `;
+      
+      return context;
+    }
+  }
+
+  private onAIResponseSuccess(response: any): void {
+    console.log('AI Response Success:', response);
+    
+    let responseText = '';
+    if (response.messages && response.messages.length > 0) {
+      responseText = response.messages.join(' ');
+    } else if (typeof response === 'string') {
+      responseText = response;
+    } else {
+      // Generate dynamic summary based on actual template data
+      const template = this.currentDataItem;
+      
+      // Check if this was a Norwegian request
+      const isNorwegianRequest = this.promptOutput?.prompt?.includes('Sammendrag') || 
+                                this.promptOutput?.prompt?.includes('malen');
+      
+      if (isNorwegianRequest) {
+        responseText = this.generateNorwegianSummary(template);
+      } else {
+        responseText = this.generateEnglishSummary(template);
+      }
+    }
+
+    if (this.promptOutput) {
+      this.promptOutput = { 
+        ...this.promptOutput, 
+        output: responseText 
+      };
+      
+      if (this.inlineAIPromptInstance?.content?.instance) {
+        this.inlineAIPromptInstance.content.instance.promptOutput = { ...this.promptOutput };
+      }
+    }
+  }
+
+  private onAIResponseError(error: any): void {
+    console.error('AI Response Error:', error);
+    
+    if (this.promptOutput) {
+      this.promptOutput = { 
+        ...this.promptOutput, 
+        output: 'Sorry, I encountered an error while summarizing this template. Please try again.' 
+      };
+      
+      if (this.inlineAIPromptInstance?.content?.instance) {
+        this.inlineAIPromptInstance.content.instance.promptOutput = { ...this.promptOutput };
+      }
+    }
+  }
+
+  private generateGuid(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  private generateEnglishSummary(template: ReportingTemplate): string {
+    if (!template) return 'Template information is not available.';
+
+    const isLocked = template.isLocked ? 'locked' : 'unlocked';
+    const isGlobal = template.isGlobalStringValue?.toLowerCase().includes('global') ? 'globally accessible' : 'restricted access';
+    const hasDocWidget = template.isDocWidgetStringValue?.toLowerCase() === 'yes' ? 'includes document widget functionality' : 'standard template without document widgets';
+    
+    const ageInDays = this.calculateDaysFromDate(template.formattedCreatedDate);
+    const ageDescription = ageInDays > 365 ? 'established' : ageInDays > 30 ? 'recent' : 'new';
+    
+    return `Template "${template.templateName}" is a ${ageDescription} reporting template owned by ${template.ownerName} from ${template.createdOrg}. ` +
+           `Created on ${template.formattedCreatedDate} and last updated ${template.formattedLastUpdatedDate}, this template is currently ${isLocked} with ${isGlobal} permissions. ` +
+           `The template ${hasDocWidget} and is ready for ${template.isLocked ? 'review and approval before use' : 'immediate use in reporting workflows'}.`;
+  }
+
+  private generateNorwegianSummary(template: ReportingTemplate): string {
+    if (!template) return 'Malinformasjon er ikke tilgjengelig.';
+
+    const isLocked = template.isLocked ? 'låst' : 'åpen';
+    const isGlobal = template.isGlobalStringValue?.toLowerCase().includes('global') ? 'globalt tilgjengelig' : 'begrenset tilgang';
+    const hasDocWidget = template.isDocWidgetStringValue?.toLowerCase() === 'yes' ? 'inkluderer dokument widget-funksjonalitet' : 'standardmal uten dokument widgets';
+    
+    const ageInDays = this.calculateDaysFromDate(template.formattedCreatedDate);
+    const ageDescription = ageInDays > 365 ? 'etablert' : ageInDays > 30 ? 'nylig' : 'ny';
+    
+    return `Malen "${template.templateName}" er en ${ageDescription} rapporteringsmal som eies av ${template.ownerName} fra ${template.createdOrg}. ` +
+           `Opprettet ${template.formattedCreatedDate} og sist oppdatert ${template.formattedLastUpdatedDate}, denne malen er for øyeblikket ${isLocked} med ${isGlobal} tillatelser. ` +
+           `Malen ${hasDocWidget} og er klar for ${template.isLocked ? 'gjennomgang og godkjenning før bruk' : 'umiddelbar bruk i rapporteringsarbeidsflyter'}.`;
+  }
+
+  private calculateDaysFromDate(dateString: string): number {
+    try {
+      const createdDate = new Date(dateString);
+      const today = new Date();
+      const diffTime = Math.abs(today.getTime() - createdDate.getTime());
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    } catch {
+      return 0;
+    }
+  }
+
+  public onReportingPromptRequest(event: any): void {
+    console.log('Reporting AI Prompt Request received:', event);
+    // This method is kept for compatibility but not used in the new implementation
+  }
+
+  public exportGridData(): void {
+    // Export grid data functionality
+    console.log('Exporting grid data...');
+    const data = this.getFilteredGridData();
+    this.downloadAsJson(data, 'reporting-templates.json');
+  }
+
+  private getFilteredGridData(): ReportingTemplate[] {
+    // Get the current filtered/sorted data from the grid
+    let data = [...this.reportingTemplates];
+    
+    // Apply current filters if any
+    if (this.reportingFilterDescriptor) {
+      data = this.applyFilters(data, this.reportingFilterDescriptor);
+    }
+    
+    // Apply current sorting if any
+    if (this.reportingSortDescriptors.length > 0) {
+      data = this.applySorting(data, this.reportingSortDescriptors);
+    }
+    
+    return data;
+  }
+
+  private applyFilters(data: ReportingTemplate[], filter: any): ReportingTemplate[] {
+    // Simplified filter application - in production use kendo-data-query process function
+    return data.filter(item => {
+      if (!filter.filters || filter.filters.length === 0) return true;
+      
+      return filter.filters.some((f: any) => {
+        const itemValue = (item as any)[f.field];
+        switch (f.operator) {
+          case 'eq': return itemValue === f.value;
+          case 'contains': return itemValue && itemValue.toString().toLowerCase().includes(f.value.toLowerCase());
+          default: return true;
+        }
+      });
+    });
+  }
+
+  private applySorting(data: ReportingTemplate[], sort: any[]): ReportingTemplate[] {
+    if (sort.length === 0) return data;
+    
+    return data.sort((a, b) => {
+      const sortDesc = sort[0];
+      const aVal = (a as any)[sortDesc.field];
+      const bVal = (b as any)[sortDesc.field];
+      
+      if (aVal < bVal) return sortDesc.dir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDesc.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  private downloadAsJson(data: any, filename: string): void {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  }
 
   private applyReportingAIResponse(response: GridToolbarAIRequestResponse): void {
     console.log('Applying reporting AI response:', response);
