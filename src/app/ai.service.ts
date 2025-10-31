@@ -18,15 +18,14 @@ export interface AIResponse {
   providedIn: 'root'
 })
 export class AIService implements HttpInterceptor {
-  private readonly aiUrl = 'https://framsiktaiapi.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview';
+  private readonly aiUrl = 'https://framsiktaiapi.openai.azure.com/openai/deployments/gpt-o1/chat/completions?api-version=2024-12-01-preview';
   private readonly aiKey = '4606bf622d804eefa76e13166d25a3a2';
   
   // AI Configuration for faster responses
   public readonly aiConfig = {
     requestUrl: '/api/ai-assistant',
     keepOutputHistory: true,
-    temperature: 0.3, // Lower temperature for faster, more focused responses
-    maxTokens: 800,   // Reduced tokens for faster responses
+    maxTokens: 1200,   // Reduced tokens for faster responses
     timeout: 15000    // 15 second timeout instead of 30
   };
 
@@ -114,9 +113,7 @@ export class AIService implements HttpInterceptor {
         }
       ],
       max_completion_tokens: this.aiConfig.maxTokens,
-      temperature: this.aiConfig.temperature,
-      stream: false, // Disable streaming for faster single response
-      top_p: 0.95    // Optimize for focused responses
+      stream: false // Disable streaming for faster single response
     };
 
     try {
@@ -135,15 +132,18 @@ export class AIService implements HttpInterceptor {
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content || '';
       
+      console.log('Raw AI Response:', content);
+      
+      // Check if the response is JSON (for grid operations) or text (for questions)
       try {
-        // Try to parse AI response as JSON
         const aiResponse = JSON.parse(content.trim());
-        console.log('AI Response:', aiResponse);
+        console.log('Parsed JSON AI Response:', aiResponse);
         return aiResponse;
       } catch (parseError) {
-        console.warn('Failed to parse AI response:', content, parseError);
+        // If not JSON, treat as natural language response (for questions)
+        console.log('Natural language AI Response:', content);
         return {
-          messages: [`AI processed: ${prompt}`],
+          messages: [content.trim()],
           highlight: []
         };
       }
@@ -157,18 +157,24 @@ export class AIService implements HttpInterceptor {
   }
 
   private getReportingTemplateSystemPrompt(): string {
-    return `AI for Kendo Grid. English/Norwegian support. Quick JSON responses only.
+    return `You are an AI assistant for a Kendo Grid with reporting templates. Support English/Norwegian.
 
-Fields: templateName, ownerName, formattedCreatedDate, formattedLastUpdatedDate, isGlobalStringValue, isDocWidgetStringValue
-, isLockedStringValue ("Låst"/"Åpen"), isLocked (boolean), createdOrg
+IMPORTANT: 
+- For GRID OPERATIONS (highlight, filter, sort, group): Return JSON only
+- For QUESTIONS (who, what, when, explain, analyze): Return natural language text
 
-Commands:
+Fields: templateName, ownerName, formattedCreatedDate, formattedLastUpdatedDate, isGlobalStringValue, isDocWidgetStringValue, isLockedStringValue ("Låst"/"Åpen"), isLocked (boolean), createdOrg
+
+GRID OPERATIONS (return JSON):
 - highlight/marker → {"messages":["Done"], "highlight":[{"logic":"and","filters":[{"field":"isLocked","operator":"eq","value":true}],"cells":{}}]}
 - filter/show/vis → {"messages":["Done"], "filter":{"logic":"and","filters":[{"field":"isLocked","operator":"eq","value":true}]}}
 - sort/sorter → {"messages":["Done"], "sort":[{"field":"templateName","dir":"asc"}]}
 - group/grupper → {"messages":["Done"], "group":[{"field":"ownerName","dir":"asc"}]}
 
-Map: låst=locked, felles=global, maler=templates, eier=owner. Return JSON only.
+QUESTIONS (return natural text):
+For questions like "who is the owner?", "what is this template?", "analyze this template" - provide helpful natural language responses using the template data provided in the user message.
+
+Map: låst=locked, felles=global, maler=templates, eier=owner.
           
           Examples (English):
           - "highlight locked templates" → {"messages": ["Highlighted locked templates"], "highlight": [{"logic": "and", "filters": [{"field": "isLocked", "operator": "eq", "value": true}], "cells": {}}]}

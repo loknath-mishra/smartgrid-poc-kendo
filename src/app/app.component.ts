@@ -103,8 +103,7 @@ import { AIService } from './ai.service';
                   themeColor="primary"
                   title="Ask AI about this template"
                   (click)="onAIButtonClick(dataItem, anchor)"
-                >
-                  AI
+                >                  
                 </button>
               </ng-template>
             </kendo-grid-column>
@@ -324,8 +323,8 @@ export class AppComponent {
     // Define prompt commands specific to reporting templates
     const promptCommands: InlineAIPromptCommand[] = [
       {
-        id: 'summarize',
-        text: 'Summarize this template',
+        id: 'analyze',
+        text: 'Analyze this template',
         icon: 'k-i-chart-line-markers'
       },   
       {
@@ -334,8 +333,8 @@ export class AppComponent {
         icon: 'k-i-question'
       },
       {
-        id: 'sammendrag',
-        text: 'Sammendrag av denne malen',
+        id: 'analyser',
+        text: 'Analyser denne malen',
         icon: 'k-i-chart-line-markers'
       },   
       {
@@ -405,12 +404,12 @@ export class AppComponent {
 
   private buildContextualPrompt(dataItem: ReportingTemplate, userPrompt: string): string {
     // Detect if this is a Norwegian command
-    const isNorwegian = userPrompt.includes('Sammendrag') || userPrompt.includes('Forklar') || 
+    const isNorwegian = userPrompt.includes('Analyser') || userPrompt.includes('Forklar') || 
                        userPrompt.includes('malen') || userPrompt.includes('formål');
     
     if (isNorwegian) {
       const context = `
-      Du lager et sammendrag av en rapporteringsmal med følgende detaljer:
+      Du analyserer en rapporteringsmal med følgende detaljer:
       - Malnavn: ${dataItem.templateName}
       - Eier: ${dataItem.ownerName}
       - Opprettet dato: ${dataItem.formattedCreatedDate}
@@ -422,13 +421,13 @@ export class AppComponent {
       
       Brukers spørsmål: ${userPrompt}
       
-      Vennligst gi et nyttig, kortfattet sammendrag på norsk om denne rapporteringsmalen.
+      Vennligst gi et nyttig, kortfattet svar på norsk om denne rapporteringsmalen.
       `;
       
       return context;
     } else {
       const context = `
-      You are summarizing a reporting template with the following details:
+      You are analyzing a reporting template with the following details:
       - Template Name: ${dataItem.templateName}
       - Owner: ${dataItem.ownerName}
       - Created Date: ${dataItem.formattedCreatedDate}
@@ -440,7 +439,7 @@ export class AppComponent {
       
       User Question: ${userPrompt}
       
-      Please provide a helpful, concise summary about this reporting template.
+      Please provide a helpful, concise response about this reporting template.
       `;
       
       return context;
@@ -456,18 +455,7 @@ export class AppComponent {
     } else if (typeof response === 'string') {
       responseText = response;
     } else {
-      // Generate dynamic summary based on actual template data
-      const template = this.currentDataItem;
-      
-      // Check if this was a Norwegian request
-      const isNorwegianRequest = this.promptOutput?.prompt?.includes('Sammendrag') || 
-                                this.promptOutput?.prompt?.includes('malen');
-      
-      if (isNorwegianRequest) {
-        responseText = this.generateNorwegianSummary(template);
-      } else {
-        responseText = this.generateEnglishSummary(template);
-      }
+      responseText = 'AI analysis completed successfully.';
     }
 
     if (this.promptOutput) {
@@ -488,7 +476,7 @@ export class AppComponent {
     if (this.promptOutput) {
       this.promptOutput = { 
         ...this.promptOutput, 
-        output: 'Sorry, I encountered an error while summarizing this template. Please try again.' 
+        output: 'Sorry, I encountered an error while analyzing this template. Please try again.' 
       };
       
       if (this.inlineAIPromptInstance?.content?.instance) {
@@ -505,7 +493,7 @@ export class AppComponent {
     });
   }
 
-  private generateEnglishSummary(template: ReportingTemplate): string {
+  private generateEnglishAnalysis(template: ReportingTemplate): string {
     if (!template) return 'Template information is not available.';
 
     const isLocked = template.isLocked ? 'locked' : 'unlocked';
@@ -520,7 +508,7 @@ export class AppComponent {
            `The template ${hasDocWidget} and is ready for ${template.isLocked ? 'review and approval before use' : 'immediate use in reporting workflows'}.`;
   }
 
-  private generateNorwegianSummary(template: ReportingTemplate): string {
+  private generateNorwegianAnalysis(template: ReportingTemplate): string {
     if (!template) return 'Malinformasjon er ikke tilgjengelig.';
 
     const isLocked = template.isLocked ? 'låst' : 'åpen';
