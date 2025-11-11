@@ -21,6 +21,200 @@ app-root > .k-icon.k-i-loading {
   transform: translate(-50%, -50%);
 }
 
+/* Grid Layout Fixes for Command Column */
+.report-template-grid.k-grid {
+  width: 100% !important;
+}
+
+.report-template-grid .k-grid-header table,
+.report-template-grid .k-grid-content table {
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+/* Fix command column header and content alignment */
+.report-template-grid .k-grid-header th.k-header,
+.report-template-grid .k-grid-content td {
+  padding: 8px 12px !important;
+  vertical-align: middle !important;
+  border-right: 1px solid #e5e5e5 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+/* AI Assistant Command Column - First Column Styling */
+.report-template-grid .k-grid-header th.k-header:first-child,
+.report-template-grid .k-grid-content td.k-command-cell:first-child {
+  width: 120px !important;
+  min-width: 120px !important;
+  max-width: 120px !important;
+  text-align: center !important;
+  padding: 4px !important;
+}
+
+.report-template-grid .k-grid-header th.k-header:first-child {
+  background-color: #f8f9fa !important;
+  font-weight: 600 !important;
+}
+
+/* Hide any debug text in headers */
+.report-template-grid .k-grid-header th.k-header:first-child::before {
+  content: none !important;
+}
+
+/* Ensure proper column widths for all columns */
+.report-template-grid .k-grid-header th:nth-child(2),
+.report-template-grid .k-grid-content td:nth-child(2) {
+  width: 200px !important;
+}
+
+.report-template-grid .k-grid-header th:nth-child(3),
+.report-template-grid .k-grid-content td:nth-child(3) {
+  width: 150px !important;
+}
+
+.report-template-grid .k-grid-header th:nth-child(4),
+.report-template-grid .k-grid-content td:nth-child(4) {
+  width: 120px !important;
+}
+
+.report-template-grid .k-grid-header th:nth-child(5),
+.report-template-grid .k-grid-content td:nth-child(5) {
+  width: 120px !important;
+}
+
+.report-template-grid .k-grid-header th:nth-child(6),
+.report-template-grid .k-grid-content td:nth-child(6) {
+  width: 100px !important;
+}
+
+.report-template-grid .k-grid-header th:nth-child(7),
+.report-template-grid .k-grid-content td:nth-child(7) {
+  width: 100px !important;
+}
+
+.report-template-grid .k-grid-header th:nth-child(8),
+.report-template-grid .k-grid-content td:nth-child(8) {
+  width: 80px !important;
+}
+
+.report-template-grid .k-grid-header th:nth-child(9),
+.report-template-grid .k-grid-content td:nth-child(9) {
+  width: 150px !important;
+}
+
+/* AI Assistant button styling */
+.ai-assistant-btn {
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3) !important;
+  transition: all 0.3s ease !important;
+  padding: 0 !important;
+}
+
+.ai-assistant-btn:hover:not([disabled]) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4) !important;
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+}
+
+.ai-assistant-btn[disabled] {
+  background: #ccc !important;
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: 0.6 !important;
+}
+
+.ai-assistant-btn .k-svg-icon {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  display: block !important;
+}
+
+/* Ensure perfect centering for AI command cell */
+.report-template-grid .k-command-cell:first-child {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 4px !important;
+}
+
+/* Content specific styling */
+.locked-content-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.locked-content-wrap kendo-svg-icon {
+  flex-shrink: 0;
+}
+
+.org-created-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Highlighting styles */
+.report-template-grid .highlighted-row {
+  background-color: #fff3cd !important;
+  animation: highlightPulse 1s ease-in-out;
+}
+
+.report-template-grid .highlighted-row td {
+  background-color: #fff3cd !important;
+}
+
+.report-template-grid .highlighted-row:hover {
+  background-color: #fff3cd !important;
+}
+
+.report-template-grid .highlighted-row:hover td {
+  background-color: #fff3cd !important;
+}
+
+@keyframes highlightPulse {
+  0% { background-color: #fff3cd; }
+  50% { background-color: #ffeb3b; }
+  100% { background-color: #fff3cd; }
+}
+
+/* Force proper table layout */
+.report-template-grid .k-grid-container {
+  overflow: hidden !important;
+}
+
+.report-template-grid .k-grid-header-wrap,
+.report-template-grid .k-grid-content-wrapper {
+  overflow: hidden !important;
+}
+
+/* Remove any extra spacing or margins that might cause misalignment */
+.report-template-grid .k-grid-header,
+.report-template-grid .k-grid-content {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure command column is properly styled */
+.report-template-grid .k-command-cell .k-button {
+  margin: 0 !important;
+}
+
 .example-wrapper {
   min-height: 280px;
   align-content: flex-start;
@@ -69,4 +263,27 @@ app-root > .k-icon.k-i-loading {
 
 .event-log li:last-child {
   margin-bottom: -1px;
+}
+
+/* Additional grid layout fixes */
+.report-template-grid .k-grid-header-wrap {
+  overflow: hidden !important;
+}
+
+.report-template-grid .k-grid-content-wrapper {
+  overflow-x: auto !important;
+}
+
+/* Remove borders that might cause misalignment */
+.report-template-grid .k-grid-header,
+.report-template-grid .k-grid-content {
+  border: none !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .report-template-grid .k-grid-header th,
+  .report-template-grid .k-grid-content td {
+    font-size: 13px;
+  }
 }
