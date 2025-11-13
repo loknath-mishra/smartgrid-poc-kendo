@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 
 export interface AIRequest {
   prompt: string;
@@ -26,8 +26,8 @@ export class AIService {
   public readonly aiConfig = {
     requestUrl: '/api/ai-assistant',
     keepOutputHistory: true,
-    maxTokens: 2000,   // Increased tokens for GPT-4o's detailed responses
-    timeout: 30000,    // 30 second timeout for GPT-4o's processing time
+    maxTokens: 4000,   // Increased tokens for full data analysis responses
+    timeout: 45000,    // 45 second timeout for complex data analysis
     temperature: 0.3,  // Lower temperature for more consistent grid operations
     model: 'gpt-4o',   // GPT-4 Omni - most recent and capable model
     enabled: true      // AI feature toggle - can be controlled externally
@@ -160,10 +160,10 @@ export class AIService {
 
     const systemContent = this.getReportingTemplateSystemPrompt();
     
-    // Enhance prompt with grid data context for summary/analysis requests
+    // For summary/analysis requests, send full grid data to LLM
     let enhancedPrompt = prompt;
     if (gridData && this.isSummaryOrAnalysisRequest(prompt)) {
-      enhancedPrompt = this.buildDataContextPrompt(prompt, gridData);
+      enhancedPrompt = this.buildFullDataPrompt(prompt, gridData);
     }
 
     const body = {
@@ -239,13 +239,15 @@ GRID OPERATIONS (return JSON):
 - group/grupper → {"messages":["Done"], "group":[{"field":"ownerName","dir":"asc"}]}
 
 SUMMARY/ANALYSIS REQUESTS (return natural text):
-For requests like "summary", "overview", "statistics", "analyze", provide comprehensive insights including:
-- Total number of templates
-- Distribution by status (locked vs unlocked)
-- Distribution by access rights (global vs restricted)
-- Top organizations/owners
-- Recent activity patterns
-- Key insights and recommendations
+For requests like "summary", "overview", "statistics", "analyze", when full grid data is provided, analyze the complete dataset and provide comprehensive insights including:
+- Statistical analysis of all templates
+- Distribution patterns by status, ownership, organizations
+- Temporal patterns in creation and updates
+- Access rights and security analysis
+- Template usage patterns and trends
+- Data quality observations
+- Actionable recommendations and insights
+- Any anomalies or notable patterns discovered
 
 QUESTIONS (return natural text):
 For questions like "who is the owner?", "what is this template?", "analyze this template" - provide helpful natural language responses using the template data provided in the user message.
@@ -295,90 +297,41 @@ Map: låst=locked, felles=global, maler=templates, eier=owner, sammendrag=summar
   }
 
   /**
-   * Build enhanced prompt with grid data context for summary/analysis requests
+   * Build enhanced prompt with full grid data for LLM analysis
    */
-  private buildDataContextPrompt(prompt: string, gridData: any[]): string {
+  private buildFullDataPrompt(prompt: string, gridData: any[]): string {
     if (!gridData || gridData.length === 0) {
       return prompt + "\n\nNote: No grid data available for analysis.";
     }
 
-    // Calculate basic statistics
-    const stats = this.calculateGridStatistics(gridData);
-    
-    const dataContext = `
+    // Send the complete grid data to LLM for analysis
+    const fullDataPrompt = `
     ${prompt}
 
-    Current Grid Data Context:
-    - Total templates: ${stats.totalTemplates}
-    - Locked templates: ${stats.lockedCount} (${stats.lockedPercentage}%)
-    - Unlocked templates: ${stats.unlockedCount} (${stats.unlockedPercentage}%)
-    - Global access templates: ${stats.globalCount}
-    - Restricted access templates: ${stats.restrictedCount}
-    - Organizations represented: ${stats.organizationCount}
-    - Top organizations: ${stats.topOrganizations.join(', ')}
-    - Template owners: ${stats.ownerCount}
-    - Top owners: ${stats.topOwners.join(', ')}
-    
-    Please provide a comprehensive analysis based on this data.`;
+    Please analyze the following reporting template data and provide comprehensive insights:
 
-    return dataContext;
+    GRID DATA (${gridData.length} templates):
+    ${JSON.stringify(gridData, null, 2)}
+
+    Please provide a detailed analysis including:
+    - Overall statistics and distribution patterns
+    - Key insights about template usage and ownership
+    - Status breakdown (locked vs unlocked templates)
+    - Access rights distribution (global vs restricted)
+    - Organizational patterns and top contributors
+    - Recent activity trends
+    - Any notable patterns or recommendations
+    - Budget data insights for last year for each owners, along with sum of all templates for last year actuals per owners
+    - Budget data insights for current year actual data for each owners, along with sum of all templates for current year actuals per owners
+    - Budget data insights for current year budget data for each owners, along with sum of all templates for current year budget per owners
+    - Budget data insights for current year deviation data for each owners, along with sum of all templates for current year deviation per owners
+
+    Respond in natural language with clear, actionable insights.`;
+
+    return fullDataPrompt;
   }
 
-  /**
-   * Calculate statistics from grid data
-   */
-  private calculateGridStatistics(gridData: any[]): any {
-    const totalTemplates = gridData.length;
-    const lockedCount = gridData.filter(item => item.isLocked === true).length;
-    const unlockedCount = totalTemplates - lockedCount;
-    const globalCount = gridData.filter(item => 
-      item.isGlobalStringValue && item.isGlobalStringValue.toLowerCase().includes('global') ||
-      item.isGlobalStringValue && item.isGlobalStringValue.toLowerCase().includes('felles')
-    ).length;
-    const restrictedCount = totalTemplates - globalCount;
-    
-    // Get unique organizations and owners
-    const organizations = [...new Set(gridData.map(item => item.createdOrg).filter(Boolean))];
-    const owners = [...new Set(gridData.map(item => item.ownerName).filter(Boolean))];
-    
-    // Get top organizations by template count
-    const orgCounts = gridData.reduce((acc: any, item) => {
-      if (item.createdOrg) {
-        acc[item.createdOrg] = (acc[item.createdOrg] || 0) + 1;
-      }
-      return acc;
-    }, {});
-    const topOrganizations = Object.entries(orgCounts)
-      .sort(([,a]: any, [,b]: any) => b - a)
-      .slice(0, 3)
-      .map(([org]: any) => org);
-    
-    // Get top owners by template count
-    const ownerCounts = gridData.reduce((acc: any, item) => {
-      if (item.ownerName) {
-        acc[item.ownerName] = (acc[item.ownerName] || 0) + 1;
-      }
-      return acc;
-    }, {});
-    const topOwners = Object.entries(ownerCounts)
-      .sort(([,a]: any, [,b]: any) => b - a)
-      .slice(0, 3)
-      .map(([owner]: any) => owner);
 
-    return {
-      totalTemplates,
-      lockedCount,
-      unlockedCount,
-      lockedPercentage: Math.round((lockedCount / totalTemplates) * 100),
-      unlockedPercentage: Math.round((unlockedCount / totalTemplates) * 100),
-      globalCount,
-      restrictedCount,
-      organizationCount: organizations.length,
-      ownerCount: owners.length,
-      topOrganizations,
-      topOwners
-    };
-  }
 
 
 

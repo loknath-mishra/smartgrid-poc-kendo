@@ -31,9 +31,13 @@ export interface ReportingTemplate {
   guidenceText: string;
   orgLevel: number;
   isUsedAsDynamicWidget: boolean;
+  previousYearActuals: number;
+  currentYearBudget: number;
+  currentYearActuals: number;
+  currentYearDeviation: number;
 }
 
-export const reportingData: ReportingTemplate[] = [
+export const reportingData: any[] = [
   {
     "templateID": 1198,
     "templateName": "Driftsbudsjett med endringer - tilleggsinnstilling HP 2026-2029",
@@ -66,7 +70,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": true
+    "isUsedAsDynamicWidget": true,
+    "previousYearActuals": 1250,
+    "currentYearBudget": 2340,
+    "currentYearActuals": 1890,
+    "currentYearDeviation": -450
   },
   {
     "templateID": 1184,
@@ -97,10 +105,14 @@ export const reportingData: ReportingTemplate[] = [
     "settings_json": "{\"reportColumn\":[\"org_name_2\",\"org_name_4\",\"kostra_account\",\"kostra_account_name\",\"kostra_function\",\"kostra_function_name\",\"fp_year_1_amount\",\"fp_year_2_amount\",\"fp_year_3_amount\",\"fp_year_4_amount\"],\"filterColumn\":[],\"conditionValues\":[],\"actionType\":\"All\",\"includeBudgetAdjustment\":false,\"includeNonApprAdjCode\":false,\"fpActionReportOrgLevel\":null,\"objectType\":null,\"hideZeroRows\":false,\"docType\":\"0\",\"budgetFormReportType\":\"\",\"filterToggleConditionValues\":[],\"displaySelectedTagsOnly\":false,\"displayCombinationTagsOnly\":false,\"createdBy\":15015}",
     "createdOrg": "Asker kommune",
     "delegatedToSubLevel": false,
-    "delegatedToSubTenant": false,
+    "delegatedTo SubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 1580,
+    "currentYearBudget": 2750,
+    "currentYearActuals": 990,
+    "currentYearDeviation": -1760
   },
   {
     "templateID": 1181,
@@ -134,7 +146,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": true
+    "isUsedAsDynamicWidget": true,
+    "previousYearActuals": 2140,
+    "currentYearBudget": 1820,
+    "currentYearActuals": 3250,
+    "currentYearDeviation": 1430
   },
   {
     "templateID": 1175,
@@ -168,7 +184,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 1890,
+    "currentYearBudget": 3250,
+    "currentYearActuals": 1470,
+    "currentYearDeviation": -1780
   },
   {
     "templateID": 1161,
@@ -202,7 +222,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": true
+    "isUsedAsDynamicWidget": true,
+    "previousYearActuals": 2750,
+    "currentYearBudget": 1420,
+    "currentYearActuals": 3890,
+    "currentYearDeviation": 2470
   },
   {
     "templateID": 1118,
@@ -236,7 +260,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 1520,
+    "currentYearBudget": 2980,
+    "currentYearActuals": 3340,
+    "currentYearDeviation": 360
   },
   {
     "templateID": 1082,
@@ -270,7 +298,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": true
+    "isUsedAsDynamicWidget": true,
+    "previousYearActuals": 3150,
+    "currentYearBudget": 1990,
+    "currentYearActuals": 2450,
+    "currentYearDeviation": 460
   },
   {
     "templateID": 1066,
@@ -304,7 +336,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 2340,
+    "currentYearBudget": 1670,
+    "currentYearActuals": 2890,
+    "currentYearDeviation": 1220
   },
   {
     "templateID": 1034,
@@ -338,7 +374,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": true
+    "isUsedAsDynamicWidget": true,
+    "previousYearActuals": 1750,
+    "currentYearBudget": 3620,
+    "currentYearActuals": 2180,
+    "currentYearDeviation": -1440
   },
   {
     "templateID": 1026,
@@ -372,7 +412,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 2580,
+    "currentYearBudget": 1340,
+    "currentYearActuals": 3760,
+    "currentYearDeviation": 2420
   },
   {
     "templateID": 1020,
@@ -406,7 +450,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 3290,
+    "currentYearBudget": 2150,
+    "currentYearActuals": 1680,
+    "currentYearDeviation": -470
   },
   {
     "templateID": 1019,
@@ -440,7 +488,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 1960,
+    "currentYearBudget": 3750,
+    "currentYearActuals": 2280,
+    "currentYearDeviation": -1470
   },
   {
     "templateID": 988,
@@ -474,7 +526,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": true
+    "isUsedAsDynamicWidget": true,
+    "previousYearActuals": 2840,
+    "currentYearBudget": 1720,
+    "currentYearActuals": 3960,
+    "currentYearDeviation": 2240
   },
   {
     "templateID": 927,
@@ -508,7 +564,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 3180,
+    "currentYearBudget": 2640,
+    "currentYearActuals": 1420,
+    "currentYearDeviation": -1220
   },
   {
     "templateID": 918,
@@ -542,7 +602,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": true
+    "isUsedAsDynamicWidget": true,
+    "previousYearActuals": 2460,
+    "currentYearBudget": 3710,
+    "currentYearActuals": 1980,
+    "currentYearDeviation": -1730
   },
   {
     "templateID": 919,
@@ -576,7 +640,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": true
+    "isUsedAsDynamicWidget": true,
+    "previousYearActuals": 1790,
+    "currentYearBudget": 2580,
+    "currentYearActuals": 3340,
+    "currentYearDeviation": 760
   },
   {
     "templateID": 921,
@@ -610,7 +678,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": true
+    "isUsedAsDynamicWidget": true,
+    "previousYearActuals": 3520,
+    "currentYearBudget": 1690,
+    "currentYearActuals": 2940,
+    "currentYearDeviation": 1250
   },
   {
     "templateID": 947,
@@ -644,7 +716,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": true
+    "isUsedAsDynamicWidget": true,
+    "previousYearActuals": 2310,
+    "currentYearBudget": 3640,
+    "currentYearActuals": 1750,
+    "currentYearDeviation": -1890
   },
   {
     "templateID": 949,
@@ -678,7 +754,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 1640,
+    "currentYearBudget": 2970,
+    "currentYearActuals": 3580,
+    "currentYearDeviation": 610
   },
   {
     "templateID": 920,
@@ -712,7 +792,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 2750,
+    "currentYearBudget": 1980,
+    "currentYearActuals": 3410,
+    "currentYearDeviation": 1430
   },
   {
     "templateID": 869,
@@ -746,7 +830,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 3290,
+    "currentYearBudget": 1540,
+    "currentYearActuals": 2810,
+    "currentYearDeviation": 1270
   },
   {
     "templateID": 740,
@@ -780,7 +868,11 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 1870,
+    "currentYearBudget": 3490,
+    "currentYearActuals": 2650,
+    "currentYearDeviation": -840
   },
   {
     "templateID": 757,
@@ -814,6 +906,10 @@ export const reportingData: ReportingTemplate[] = [
     "delegatedToSubTenant": false,
     "guidenceText": "",
     "orgLevel": 1,
-    "isUsedAsDynamicWidget": false
+    "isUsedAsDynamicWidget": false,
+    "previousYearActuals": 2590,
+    "currentYearBudget": 3120,
+    "currentYearActuals": 1780,
+    "currentYearDeviation": -1340
   }
 ];

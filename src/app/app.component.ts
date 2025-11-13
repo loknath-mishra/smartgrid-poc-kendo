@@ -5,11 +5,10 @@ import {
   GridComponent,
   GridToolbarAIWindowSettings,
   GridToolbarAIPromptSettings,
-  AIAssistantToolbarDirective,
   GridToolbarAIRequestResponse,
 } from "@progress/kendo-angular-grid";
 import { KENDO_TOOLBAR } from "@progress/kendo-angular-toolbar";
-import { process, SortDescriptor, GroupDescriptor, CompositeFilterDescriptor } from "@progress/kendo-data-query";
+import { SortDescriptor, GroupDescriptor, CompositeFilterDescriptor } from "@progress/kendo-data-query";
 import {
   AIPromptComponent,
   PromptOutput,
@@ -20,7 +19,6 @@ import {
   InlineAIPromptOutputAction
 } from "@progress/kendo-angular-conversational-ui";
 import {
-  BadgeThemeColor,
   KENDO_INDICATORS,
 } from "@progress/kendo-angular-indicators";
 import { KENDO_ICONS } from "@progress/kendo-angular-icons";
@@ -209,6 +207,54 @@ import { AIService } from './ai.service';
             >
               <ng-template kendoGridCellTemplate let-dataItem>
                 <span class="org-created-name" [title]="dataItem.createdOrg">{{ dataItem.createdOrg }}</span>
+              </ng-template>
+            </kendo-grid-column>
+            
+            <!-- Price1 Column -->
+            <kendo-grid-column
+              field="previousYearActuals"
+              title="Previous Year Actuals"
+              [width]="100"
+              [sortable]="true"
+            >
+              <ng-template kendoGridCellTemplate let-dataItem>
+                <span class="numeric-value">{{ dataItem.previousYearActuals }}</span>
+              </ng-template>
+            </kendo-grid-column>
+            
+            <!-- Price2 Column -->
+            <kendo-grid-column
+              field="currentYearBudget"
+              title="Current Year Budget"
+              [width]="100"
+              [sortable]="true"
+            >
+              <ng-template kendoGridCellTemplate let-dataItem>
+                <span class="numeric-value">{{ dataItem.currentYearBudget }}</span>
+              </ng-template>
+            </kendo-grid-column>
+            
+            <!-- Price3 Column -->
+            <kendo-grid-column
+              field="currentYearActuals"
+              title="Current Year Actuals"
+              [width]="100"
+              [sortable]="true"
+            >
+              <ng-template kendoGridCellTemplate let-dataItem>
+                <span class="numeric-value">{{ dataItem.currentYearActuals }}</span>
+              </ng-template>
+            </kendo-grid-column>
+            
+            <!-- Price4 Column -->
+            <kendo-grid-column
+              field="currentYearDeviation"
+              title="Current Year Deviation"
+              [width]="100"
+              [sortable]="true"
+            >
+              <ng-template kendoGridCellTemplate let-dataItem>
+                <span class="numeric-value">{{ dataItem.currentYearDeviation }}</span>
               </ng-template>
             </kendo-grid-column>
           </kendo-grid>
@@ -452,6 +498,14 @@ import { AIService } from './ai.service';
         border-left: 3px solid #667eea;
         padding-left: 15px;
       }
+      
+      /* Numeric value styling */
+      .numeric-value {
+        font-weight: 600;
+        color: #28a745;
+        text-align: right;
+        display: block;
+      }
     `,
   ],
 })
@@ -548,7 +602,7 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   constructor(
     public readonly aiService: AIService,
-    private promptService: InlineAIPromptService
+    private readonly promptService: InlineAIPromptService
   ) {
     // Set initial grid data for AI context
     this.aiService.setCurrentGridData(this.reportingTemplates);
@@ -1091,7 +1145,7 @@ export class AppComponent implements OnInit, AfterViewInit {
 
     try {
       // Generate AI response directly
-      this.aiService.generateGridResponse(prompt, this.reportingTemplates)
+      this.aiService.generateGridResponse(prompt)
         .then(response => {
           console.log('Direct AI response:', response);
           this.onReportingResponseSuccess({
