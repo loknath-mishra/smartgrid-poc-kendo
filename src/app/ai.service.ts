@@ -18,18 +18,15 @@ export interface AIResponse {
   providedIn: 'root'
 })
 export class AIService {
-  // Try different deployment names - update this based on your actual Azure OpenAI deployments
-  private readonly aiUrl = 'https://framsiktaiapi.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-02-15-preview';
-  private readonly aiKey = '4606bf622d804eefa76e13166d25a3a2';
+  // ChatGPT-5 Azure OpenAI endpoint
+  private readonly aiUrl = 'https://FramsiktAIAPI.openai.azure.com/openai/v1/chat/completions';
+  private readonly aiKey = 'eab2a69c0ca64af1aac5584eeab0907b';
   
-  // AI Configuration optimized for GPT-4o (GPT-4 Omni)
   public readonly aiConfig = {
     requestUrl: '/api/ai-assistant',
     keepOutputHistory: true,
-    maxTokens: 4000,   // Increased tokens for full data analysis responses
-    timeout: 45000,    // 45 second timeout for complex data analysis
-    temperature: 0.3,  // Lower temperature for more consistent grid operations
-    model: 'gpt-4o',   // GPT-4 Omni - most recent and capable model
+    maxTokens: 10000,   // Increased tokens for full data analysis responses
+    model: 'gpt-5-mini',   
     enabled: true      // AI feature toggle - can be controlled externally
   };
 
@@ -165,8 +162,15 @@ export class AIService {
     if (gridData && this.isSummaryOrAnalysisRequest(prompt)) {
       enhancedPrompt = this.buildFullDataPrompt(prompt, gridData);
     }
+    else if(gridData && prompt.toLowerCase().includes('gridlookup:')) {
+      console.log('Data query request detected, building data query prompt');
+      console.log('Grid data size for query:', gridData.length);
+      console.log('Sample data for query:', gridData.slice(0, 2));
+      enhancedPrompt = this.buildDataQueryPrompt(prompt, gridData);
+    }
 
     const body = {
+      model: 'gpt-5-mini',
       messages: [
         {
           role: 'system',
@@ -177,24 +181,17 @@ export class AIService {
           content: enhancedPrompt
         }
       ],
-      max_completion_tokens: this.aiConfig.maxTokens,
-      temperature: this.aiConfig.temperature,
       stream: false // Disable streaming for faster single response
     };
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.aiConfig.timeout);
-
       const response = await fetch(this.aiUrl, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(body),
         signal: controller.signal
       });
-
-      clearTimeout(timeoutId);
-
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content || '';
       
@@ -331,8 +328,19 @@ Map: låst=locked, felles=global, maler=templates, eier=owner, sammendrag=summar
     return fullDataPrompt;
   }
 
+  private buildDataQueryPrompt(prompt: string, gridData: any[]): string {
+    if (!gridData || gridData.length === 0) {
+      return prompt + "\n\nNote: No grid data available for query.";
+    }
 
-
+    const dataQueryPrompt = `
+    ${prompt}
+      Please analyze the following reporting template data and provide answer the questions related to it:
+    GRID DATA (${gridData.length} templates):
+    ${JSON.stringify(gridData, null, 2)}
+    Respond in natural language with clear and accurate information`;
+    return dataQueryPrompt;
+  }
 
 
   public processGridAIRequest(request: AIRequest): Observable<AIResponse> {
@@ -368,7 +376,7 @@ Map: låst=locked, felles=global, maler=templates, eier=owner, sammendrag=summar
                    Please provide JavaScript code to highlight the relevant grid rows based on the user's request.`
         }
       ],
-      max_completion_tokens: 1000
+      model: 'gpt-5-mini'
     };
 
     return this.http.post<any>(this.aiUrl, body, { headers }).pipe(

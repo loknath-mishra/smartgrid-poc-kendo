@@ -42,14 +42,7 @@ export class AIMockService implements HttpInterceptor {
           // Get current grid data from the service - ensure it's up to date
           let currentGridData = this.aiService['_currentGridData'] || [];
           
-          // For summary/analysis requests, ensure we have fresh data
-          if (prompt.toLowerCase().includes('summary') || prompt.toLowerCase().includes('sammendrag')) {
-            console.log('Summary request detected, ensuring fresh grid data');
-            // Try to get the most current data if available
-            if (window && (window as any).currentGridData) {
-              currentGridData = (window as any).currentGridData;
-            }
-          }
+          currentGridData = (window as any).currentGridData;
           
           console.log('Using grid data for AI request:', currentGridData.length, 'items');
           console.log('Sample data:', currentGridData.slice(0, 2));
