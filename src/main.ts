@@ -8,7 +8,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AppComponent } from './app/app.component';
-import { AIMockService } from './app/ai-mock.service';
+import { AIService } from './app/ai.service';
 import { ErrorHandler, Injectable } from '@angular/core';
 
 import '@progress/kendo-angular-intl/locales/en/all';
@@ -39,10 +39,10 @@ bootstrapApplication(AppComponent, {
   providers: [
     provideAnimations(),
     provideHttpClient(),
-    // Re-enable simplified interceptor for AI requests
+    // AI Service as HTTP Interceptor
     {
       provide: HTTP_INTERCEPTORS,
-      useClass: AIMockService,
+      useClass: AIService,
       multi: true
     },
     {

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpResponse } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -17,7 +17,7 @@ export interface AIResponse {
 @Injectable({
   providedIn: 'root'
 })
-export class AIService {
+export class AIService implements HttpInterceptor {
   // ChatGPT-5 Azure OpenAI endpoint
   private readonly aiUrl = 'https://FramsiktAIAPI.openai.azure.com/openai/v1/chat/completions';
   private readonly aiKey = 'eab2a69c0ca64af1aac5584eeab0907b';
@@ -26,7 +26,7 @@ export class AIService {
     requestUrl: '/api/ai-assistant',
     keepOutputHistory: true,
     maxTokens: 10000,   // Increased tokens for full data analysis responses
-    model: 'gpt-5-mini',   
+    model: 'gpt-5-mini',
     enabled: true      // AI feature toggle - can be controlled externally
   };
 
@@ -67,6 +67,92 @@ export class AIService {
   }
 
   constructor(private readonly http: HttpClient) {}
+
+  /**
+   * HTTP Interceptor method - intercepts AI assistant requests
+   */
+  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    // Intercept requests to our AI service
+    if (req.url.includes('/api/ai-assistant') || req.url.includes('bypass-interceptor')) {
+      console.log('AI Service - Intercepting AI request:', req.body);
+      
+      try {
+        // Extract the prompt from the request body
+        const requestBody = req.body;
+        let prompt = '';
+        
+        // Handle different request body structures
+        if (requestBody?.contents && Array.isArray(requestBody.contents)) {
+          if (requestBody.contents[0] && typeof requestBody.contents[0] === 'object') {
+            prompt = requestBody.contents[0].text || requestBody.contents[0].content || '';
+          } else {
+            prompt = requestBody.contents[0] || '';
+          }
+        } else if (requestBody?.promptMessage) {
+          prompt = requestBody.promptMessage;
+        } else if (requestBody?.role === 'user' && requestBody.contents) {
+          prompt = requestBody.contents[0] || '';
+        } else if (typeof requestBody === 'string') {
+          prompt = requestBody;
+        }
+        
+        console.log('Extracted prompt:', prompt);
+        
+        // Generate AI response and return as HTTP response
+        return new Observable(observer => {
+          // Get current grid data - ensure it's up to date
+          let currentGridData = this._currentGridData || [];
+          currentGridData = (window as any).currentGridData || currentGridData;
+          
+          console.log('Using grid data for AI request:', currentGridData.length, 'items');
+          
+          this.generateGridResponse(prompt, currentGridData)
+            .then(response => {
+              console.log('AI response from interceptor:', response);
+              // Create HTTP response
+              const httpResponse = new HttpResponse({
+                body: response,
+                status: 200,
+                statusText: 'OK',
+                url: req.url
+              });
+              observer.next(httpResponse);
+              observer.complete();
+            })
+            .catch(error => {
+              console.error('AI service error:', error);
+              // Return fallback response
+              const fallbackResponse = new HttpResponse({
+                body: {
+                  messages: [`Processing: ${prompt} (${currentGridData.length} templates available)`],
+                  highlight: []
+                },
+                status: 200,
+                statusText: 'OK',
+                url: req.url
+              });
+              observer.next(fallbackResponse);
+              observer.complete();
+            });
+        });
+      } catch (interceptError) {
+        console.error('Interceptor error:', interceptError);
+        // Return fallback response
+        return of(new HttpResponse({
+          body: {
+            messages: ['AI service temporarily unavailable'],
+            highlight: []
+          },
+          status: 200,
+          statusText: 'OK',
+          url: req.url
+        }));
+      }
+    }
+    
+    // For all other requests, continue normally
+    return next.handle(req);
+  }
 
   /**
    * Direct AI request handler that bypasses HTTP interceptor issues
@@ -220,45 +306,26 @@ export class AIService {
   }
 
   private getReportingTemplateSystemPrompt(): string {
-    return `You are an AI assistant EXCLUSIVELY for a Kendo Grid with reporting templates. You MUST ONLY respond to questions and requests related to the grid data, filtering, highlighting, sorting, grouping, and analysis of the reporting templates.
+    return `You are an AI assistant for a Kendo Grid with reporting templates. ONLY answer grid-related questions.
 
-STRICT RULES:
-- ONLY answer questions about the Kendo Grid data and reporting templates
-- REFUSE to answer any questions unrelated to the grid (like "what is a cat?", general knowledge, etc.)
-- If asked about non-grid topics, respond with: "I can only help with questions about the reporting templates grid. Please ask about the data, filtering, highlighting, or analysis of the templates."
+REFUSE non-grid topics with: "I can only help with grid questions about reporting templates."
 
-WHAT I CAN HELP WITH:
-- Grid operations: highlighting, filtering, sorting, grouping templates
-- Data analysis: summaries, statistics, trends in the template data
-- Questions about specific templates: owners, dates, status, properties
-- Comparisons and patterns in the reporting template data
+RESPONSE FORMAT:
+- Grid operations (highlight/filter/sort): Return JSON only
+- Questions about templates: Brief natural language text
 
-RESPONSE FORMATS:
-- For GRID OPERATIONS (highlight, filter, sort, group): Return JSON only
-- For QUESTIONS about the templates: Return natural language text
-- For SUMMARY/ANALYSIS of template data: Return natural language with statistics
+KEY FIELDS: templateName, ownerName, isLocked, isGlobalStringValue, currentYearBudget, currentYearActuals
 
-Fields available: templateName, ownerName, formattedCreatedDate, formattedLastUpdatedDate, isGlobalStringValue, isDocWidgetStringValue, isLockedStringValue ("Låst"/"Åpen"), isLocked (boolean), createdOrg, previousYearActuals, currentYearBudget, currentYearActuals, currentYearDeviation
+GRID OPERATIONS (JSON):
+highlight: {"messages": ["Done"], "highlight": [{"logic": "and", "filters": [{"field": "isLocked", "operator": "eq", "value": true}], "cells": {}}]}
+filter: {"messages": ["Done"], "filter": {"logic": "and", "filters": [{"field": "ownerName", "operator": "eq", "value": "Name"}]}}
+sort: {"messages": ["Done"], "sort": [{"field": "templateName", "dir": "asc"}]}
 
-GRID OPERATIONS (return JSON):
-Examples:
-- "highlight locked templates" → {"messages": ["Highlighted locked templates"], "highlight": [{"logic": "and", "filters": [{"field": "isLocked", "operator": "eq", "value": true}], "cells": {}}]}
-- "show templates by Loknath Mishra" → {"messages": ["Filtered templates by Loknath Mishra"], "filter": {"logic": "and", "filters": [{"field": "ownerName", "operator": "eq", "value": "Loknath Mishra"}]}}
-- "sort by template name" → {"messages": ["Sorted by template name"], "sort": [{"field": "templateName", "dir": "asc"}]}
-
-QUESTIONS ABOUT TEMPLATES (return natural text):
-- "Who owns the most templates?"
-- "What is template 1198?"
-- "Analyze template distribution by owner"
-- "Show budget trends"
-
-REFUSE NON-GRID QUESTIONS:
-- "What is a cat?" → "I can only help with questions about the reporting templates grid..."
-- "Tell me about the weather" → "I can only help with questions about the reporting templates grid..."
-- Any question not related to the grid data → Standard refusal message
+OPERATORS: eq, gt, lt, gte, lte, contains
 
 Available operators: eq, gt, lt, gte, lte, contains`;
   }
+
 
   private isSummaryOrAnalysisRequest(prompt: string): boolean {
     const summaryKeywords = [

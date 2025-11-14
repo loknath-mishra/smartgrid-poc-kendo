@@ -1,4 +1,4 @@
-import { Component, ViewChild, ViewEncapsulation, ElementRef, OnInit, AfterViewInit } from "@angular/core";
+import { Component, ViewChild, ViewEncapsulation, ElementRef, OnInit, AfterViewInit, TemplateRef } from "@angular/core";
 import { ReportingTemplate, reportingData } from "./highlight-data";
 import {
   KENDO_GRID,
@@ -76,8 +76,9 @@ import { AIService } from './ai.service';
                 kendoGridAIAssistantTool
                 requestUrl="bypass-interceptor"
                 [requestOptions]="aiRequestOptions"
-                [keepOutputHistory]="true"
+                [keepOutputHistory]="false"
                 [aiPromptSettings]="reportingAiPromptSettings"
+                [autoClose]="false"
                 [aiWindowSettings]="aiWindowSettings"
                 text="AI Assistant"
                 [disabled]="!aiService.isAIEnabled"
@@ -511,7 +512,8 @@ import { AIService } from './ai.service';
 })
 export class AppComponent implements OnInit, AfterViewInit {
   @ViewChild('reportingGrid', { static: false }) public reportingGrid!: GridComponent;
-  
+  customOutputs: PromptOutput[] = [];
+  outputIdCounter = 1;
   public aiRequestOptions = {
     timeout: 30000,
     withCredentials: false
@@ -521,7 +523,7 @@ export class AppComponent implements OnInit, AfterViewInit {
   public aiWindowSettings: GridToolbarAIWindowSettings = {
     width: 600,
     height: 650,
-    title: 'AI Assistant - Toolbar, Highlighting & Analysis',
+    title: 'Framsikt AI Assistant',
     resizable: true,
     draggable: true
   };
@@ -556,6 +558,7 @@ export class AppComponent implements OnInit, AfterViewInit {
       "Analyser malfordeling etter organisasjon",
       "Vis statusfordeling for maler",
     ],
+    promptOutputs : this.customOutputs
   };
   public resetIcon: SVGIcon = arrowRotateCcwIcon;
   public lockIcon: SVGIcon = lockIcon;
@@ -756,6 +759,17 @@ export class AppComponent implements OnInit, AfterViewInit {
     if (responseData) {
       console.log('Processing reporting response data:', responseData);
       this.applyReportingAIResponse(responseData);
+      
+      // Add to custom outputs for history
+      if (responseData.messages && responseData.messages.length > 0) {
+        const output: PromptOutput = {
+          id: this.outputIdCounter.toString(),
+          output: responseData.messages.join(' '),
+          prompt: event.prompt || 'AI Assistant Request'
+        };
+        this.addCustomOutput(output);
+        this.outputIdCounter++;
+      }
     } else {
       console.warn('No response data found in reporting event');
     }
@@ -763,6 +777,15 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   public onReportingResponseError(event: any): void {
     console.error('Reporting AI Response Error:', event);
+    
+    // Add error to custom outputs
+    const output: PromptOutput = {
+      id: this.outputIdCounter.toString(),
+      output: 'Sorry, there was an error processing your request. Please try again.',
+      prompt: event.prompt || 'AI Assistant Request'
+    };
+    this.addCustomOutput(output);
+    this.outputIdCounter++;
   }
 
   // AI Column Assistant Methods - Enhanced for comprehensive analysis
@@ -887,7 +910,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     console.log('Handling AI request:', prompt, 'for:', dataItem.templateName);
     
     // Create output object
-    const outputId = this.generateGuid();
+    const outputId = this.outputIdCounter.toString();
     const output: PromptOutput = {
       id: outputId,
       output: '',
@@ -895,6 +918,7 @@ export class AppComponent implements OnInit, AfterViewInit {
     };
 
     this.promptOutput = output;
+    this.outputIdCounter++;
 
     // Create context-aware prompt for the AI service
     const contextualPrompt = this.buildContextualPrompt(dataItem, prompt);
@@ -962,10 +986,14 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
 
     if (this.promptOutput) {
+      // Update the current output
       this.promptOutput = { 
         ...this.promptOutput, 
         output: responseText 
       };
+      
+      // Add to custom outputs
+      this.addCustomOutput(this.promptOutput);
       
       if (this.inlineAIPromptInstance?.content?.instance) {
         this.inlineAIPromptInstance.content.instance.promptOutput = { ...this.promptOutput };
@@ -976,11 +1004,16 @@ export class AppComponent implements OnInit, AfterViewInit {
   private onAIResponseError(error: any): void {
     console.error('AI Response Error:', error);
     
+    const errorMessage = 'Sorry, I encountered an error while analyzing this template. Please try again.';
+    
     if (this.promptOutput) {
       this.promptOutput = { 
         ...this.promptOutput, 
-        output: 'Sorry, I encountered an error while analyzing this template. Please try again.' 
+        output: errorMessage 
       };
+      
+      // Add error output to custom outputs
+      this.addCustomOutput(this.promptOutput);
       
       if (this.inlineAIPromptInstance?.content?.instance) {
         this.inlineAIPromptInstance.content.instance.promptOutput = { ...this.promptOutput };
@@ -1340,9 +1373,6 @@ export class AppComponent implements OnInit, AfterViewInit {
     });
     
     console.log('Highlighted template IDs:', Array.from(this.highlightedTemplateIds));
-    
-    // Force grid refresh to ensure highlighting is applied correctly
-    this.refreshGridView();
   }
 
   /**
@@ -1378,6 +1408,23 @@ export class AppComponent implements OnInit, AfterViewInit {
     }
     
     return false;
+  }
+
+  private addCustomOutput(output: PromptOutput): void {
+    // Check if output already exists (by ID) to avoid duplicates
+    const existingIndex = this.customOutputs.findIndex(o => o.id === output.id);
+    if (existingIndex !== -1) {
+      this.customOutputs[existingIndex] = output;
+    } else {
+      this.customOutputs.unshift(output);
+      // Keep only last 10 outputs
+      if (this.customOutputs.length > 10) {
+        this.customOutputs = this.customOutputs.slice(0, 10);
+      }
+    }
+    
+    // Update the prompt settings to reflect current outputs
+    this.reportingAiPromptSettings.promptOutputs = [...this.customOutputs];
   }
 
   private matchesFilter(template: ReportingTemplate, filter: any): boolean {
